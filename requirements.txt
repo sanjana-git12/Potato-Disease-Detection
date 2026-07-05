@@ -1,6 +1,5 @@
-tensorflow
-numpy
-matplotlib
-pillow
-opencv-python
 streamlit
+tensorflow==2.19.0
+numpy
+pillow
+matplotlib
