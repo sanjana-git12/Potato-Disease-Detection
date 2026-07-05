@@ -3,7 +3,18 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-model = tf.keras.models.load_model("potato_model.keras")
+st.set_page_config(
+    page_title="Potato Disease Detection",
+    page_icon="🥔",
+    layout="centered"
+)
+
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("potato_model.keras")
+
+model = load_model()
+
 
 CLASS_NAMES = [
     "Early Blight",
@@ -11,34 +22,8 @@ CLASS_NAMES = [
     "Healthy"
 ]
 
-IMAGE_SIZE = (256, 256)
-
-def predict(image):
-
-    image = image.resize(IMAGE_SIZE)
-    img = np.array(image)
-
-    img = img / 255.0
-    img = np.expand_dims(img, axis=0)
-
-    prediction = model.predict(img, verbose=0)
-
-    predicted_class = CLASS_NAMES[np.argmax(prediction)]
-    confidence = np.max(prediction) * 100
-
-    return predicted_class, confidence
-
-
-
-st.set_page_config(
-    page_title="Potato Disease Detection",
-    page_icon="🥔"
-)
-
 st.title("Potato Disease Detection")
-st.write(
-    "Upload a potato leaf image to predict whether it is Healthy, Early Blight, or Late Blight."
-)
+st.write("Upload a potato leaf image to detect the disease.")
 
 uploaded_file = st.file_uploader(
     "Choose an image",
@@ -51,32 +36,44 @@ if uploaded_file is not None:
 
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    if st.button("Predict"):
+    image = image.resize((256, 256))
 
-        with st.spinner("Analyzing image..."):
+    img_array = np.array(image)
 
-            disease, confidence = predict(image)
 
-        st.success(f"Prediction: **{disease}**")
-        st.info(f"Confidence: **{confidence:.2f}%**")
+    img_array = np.expand_dims(img_array, axis=0)
 
-        if disease == "Healthy":
-            st.success("The potato leaf appears healthy.")
+    prediction = model.predict(img_array, verbose=0)
 
-        elif disease == "Early Blight":
-            st.warning(
-                "⚠ Early Blight detected.\n\n"
-                "Recommendation:\n"
-                "- Remove infected leaves\n"
-                "- Use recommended fungicides\n"
-                "- Avoid overhead irrigation"
-            )
+    predicted_index = np.argmax(prediction[0])
 
-        else:
-            st.error(
-                "Late Blight detected.\n\n"
-                "Recommendation:\n"
-                "- Remove infected plants\n"
-                "- Apply fungicides immediately\n"
-                "- Prevent water accumulation"
-            )
+    confidence = np.max(prediction[0]) * 100
+
+    st.subheader("Prediction")
+    st.success(CLASS_NAMES[predicted_index])
+
+    st.subheader("Confidence")
+    st.write(f"{confidence:.2f}%")
+
+    
+    with st.expander("Model Output"):
+        st.write(prediction)
+
+    if CLASS_NAMES[predicted_index] == "Healthy":
+        st.success("The potato leaf appears healthy.")
+
+    elif CLASS_NAMES[predicted_index] == "Early Blight":
+        st.warning(
+            "Early Blight detected.\n\n"
+            "• Remove infected leaves.\n"
+            "• Apply recommended fungicide.\n"
+            "• Avoid overhead irrigation."
+        )
+
+    else:
+        st.error(
+            "Late Blight detected.\n\n"
+            "• Remove infected plants immediately.\n"
+            "• Apply fungicide.\n"
+            "• Improve field drainage."
+        )
